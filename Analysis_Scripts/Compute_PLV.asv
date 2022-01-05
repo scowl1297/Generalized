@@ -1,0 +1,71 @@
+
+
+function [plvbin, zscore_plv] = Compute_PLV(cfg)
+
+%addpath(genpath('Z:\Projects\Thalamus Epilepsy\SfN 2021\scripts'))
+addpath('Z:\MATLAB\timefreq');
+
+    fs = cfg.fs;
+    fq = cfg.fq;
+    montage = cfg.montage;
+    phase = cfg.phase;
+    seizures = cfg.seizures;
+    seizure_number = cfg.sizure_number;
+    binwidth = cfg.binwidth;
+    time = cfg.time;
+
+    %%
+    num_samples = size(phase{1},1);
+    nch = size(data{1},2);
+    num_seizures = size(data,3);
+    
+    nfq = length(fq);
+    
+    nbins = floor(num_samples/binwidth);
+    tbin = zeros([nbins,1]);
+
+    
+    for s=1:num_seizures
+        
+        time = seconds(time(:,s) - seizures.onset(seizures.seizure_id == seizure_number(s)));
+        
+        plvbin{s} = zeros([nbins,nfq,nch],'single');
+        
+        for i=1:nbins
+            idx = (1+(i-1)*binwidth):(i*binwidth);
+            tbin(i) = mean(time(idx));
+            for ch2 = 1:nch
+                plvbin{s}(i,:,ch2) =  ...
+                    abs(sum(exp(sqrt(-1)*(phase{s}(idx,:,ch1)-phase{s}(idx,:,ch2))),1)/binwidth);
+            end
+        end
+        
+        
+        baseline_bins = 10*fs/binwidth + 1:(15*fs/binwidth);
+        
+        baseline_plv = repmat(mean(plvbin{s}(baseline_bins,:,:),1), [size(plvbin{s},1),1,1]);
+        std_plv = repmat(std(plvbin{s}(baseline_bins,:,:),1,1), [size(plvbin{s},1),1,1]);
+        zscore_plv{s}= (plvbin{s} - baseline_plv)./std_plv;
+        
+    end
+    
+    
+    
+    
+    %powerbin = zeros(nbins,nfq,nch,'single');
+    
+    for s=1:num_seizures
+        
+        power{s} = zeros([num_samples,nfq,nch],'single');
+        phase{s} = zeros([num_samples,nfq,nch],'single');
+        
+        for ch=1:nch
+            fprintf('Seizure %d, Channel %s...\n', s, montage.label{ch})
+            Y = fast_wavtransform(fq, data(:,ch,s),fs,width);
+            power{s}(:,:,ch) = abs(Y).^2;
+            phase{s}(:,:,ch) = angle(Y);
+        end
+    end
+  
+    %%
+end

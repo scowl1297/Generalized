@@ -1,0 +1,169 @@
+
+
+function WaveletDecomposition
+
+addpath(genpath('Z:\Projects\Thalamus Epilepsy\SfN 2021\scripts'))
+addpath('Z:\MATLAB\timefreq');
+
+
+
+    fs = cfg.fs;
+    fq = cfg.fq;
+    width = cfg.width;
+    montage = cfg.montage;
+    data = cfg.data;
+
+    %%
+
+    nch = length(montage.channel);
+    num_samples = size(data,1);
+    nfq = length(fq);
+
+    %powerbin = zeros(nbins,nfq,nch,'single');
+    
+    for s=1:height(seizure_onset{f})
+        
+        power{s} = zeros([num_samples,nfq,nch],'single');
+        phase{s} = zeros([num_samples,nfq,nch],'single');
+        
+        for ch=1:nch
+            fprintf('File %d, seizure %d, Channel %s...\n', f, s, montage.label{ch})
+            Y = fast_wavtransform(fq, y_seizure_onset{f}(:,ch,s),fs,width);
+            power{s}(:,:,ch) = abs(Y).^2;
+            phase{s}(:,:,ch) = angle(Y);
+        end
+    end
+  
+    %%
+    %EMU014_display_seizure_spectra_onset;
+
+
+
+
+
+
+%% seizure onset plv
+for f=1:length(edf_filenames)
+
+    % sampling frequency
+    fs = fs(1);
+    ch1 = find(strcmp('C''1',montage.channel));
+    
+    binwidth = 1024;
+    num_samples = length(t_seizure_onset{f});
+    nbins = floor(num_samples/binwidth);
+    tbin = zeros([nbins,1]);
+
+    for s=1:height(seizure_onset{f})
+        
+        time = seconds(t_seizure_onset{f}(:,s) - seizure_onset{f}.Onset(s));
+        
+        plvbin_seizure_onset{f}{s} = zeros([nbins,nfq,nch],'single');
+        
+        for i=1:nbins
+            idx = (1+(i-1)*binwidth):(i*binwidth);
+            tbin(i) = mean(time(idx));
+            for ch2 = 1:nch
+                plvbin_seizure_onset{f}{s}(i,:,ch2) =  ...
+                    abs(sum(exp(sqrt(-1)*(phase_seizure_onset{f}{s}(idx,:,ch1)-phase_seizure_onset{f}{s}(idx,:,ch2))),1)/binwidth);
+            end
+        end
+        
+        
+        baseline_bins = 1:(15*fs/binwidth);
+        
+        baseline_plv = repmat(mean(plvbin_seizure_onset{f}{s}(baseline_bins,:,:),1), [size(plvbin_seizure_onset{f}{s},1),1,1]);
+        std_plv = repmat(std(plvbin_seizure_onset{f}{s}(baseline_bins,:,:),1,1), [size(plvbin_seizure_onset{f}{s},1),1,1]);
+        zscore_plv_seizure_onset{f}{s}= (plvbin_seizure_onset{f}{s} - baseline_plv)./std_plv;
+        
+    end
+    %%
+    %EMU022_display_seizure_plv_onset;
+    %close all
+end
+
+
+%% seizure offsets
+for f=1:length(edf_filenames)
+
+    % sampling frequency
+    fs = fs(1);
+    
+
+    fq = logspace(log10(4), log10(250), 25);
+    %fq = 4:4:160;
+    fq_display = fq;
+    width = 7;
+
+    %%
+    binwidth = 1024;
+    nch = length(montage.channel);
+    num_samples = length(t_seizure_offset{f});
+    nbins = floor(num_samples/binwidth);
+    nfq = length(fq);
+    tbin = zeros([nbins,1]);
+
+    %powerbin = zeros(nbins,nfq,nch,'single');
+    
+    for s=1:height(seizure_offset{f})
+        
+        power_seizure_offset{f}{s} = zeros([num_samples,nfq,nch],'single');
+        phase_seizure_offset{f}{s} = zeros([num_samples,nfq,nch],'single');
+        
+        for ch=1:nch
+            fprintf('File %d, seizure %d, Channel %s...\n', f, seizure_offset{f}.seizure_id(s), montage.label{ch})
+            Y = fast_wavtransform(fq, y_seizure_offset{f}(:,ch,s),fs,width);
+            power_seizure_offset{f}{s}(:,:,ch) = abs(Y).^2;
+            phase_seizure_offset{f}{s}(:,:,ch) = angle(Y);
+        end
+    end
+  
+    %%
+    EMU022_display_seizure_spectra_offset;
+    close all
+end
+
+%% seizure offset plv
+for f=1:length(edf_filenames)
+
+    f
+    
+    % sampling frequency
+    fs = fs(1);
+    ch1 = find(strcmp('C''1',montage.channel));
+    
+    binwidth = 1024;
+    num_samples = length(t_seizure_offset{f});
+    nbins = floor(num_samples/binwidth);
+    tbin = zeros([nbins,1]);
+
+    for s=1:height(seizure_offset{f})
+        
+        time = seconds(t_seizure_offset{f}(:,s) - seizure_offset{f}.Onset(s));
+        
+        plvbin_seizure_offset{f}{s} = zeros([nbins,nfq,nch],'single');
+        
+        for i=1:nbins
+            idx = (1+(i-1)*binwidth):(i*binwidth);
+            tbin(i) = mean(time(idx));
+            for ch2 = 1:nch
+                plvbin_seizure_offset{f}{s}(i,:,ch2) =  ...
+                    abs(sum(exp(sqrt(-1)*(phase_seizure_offset{f}{s}(idx,:,ch1)-phase_seizure_offset{f}{s}(idx,:,ch2))),1)/binwidth);
+            end
+        end
+        
+        
+        baseline_bins = 1:(15*fs/binwidth);
+        
+        baseline_plv = repmat(mean(plvbin_seizure_onset{f}{s}(baseline_bins,:,:),1), [size(plvbin_seizure_offset{f}{s},1),1,1]);
+        std_plv = repmat(std(plvbin_seizure_onset{f}{s}(baseline_bins,:,:),1,1), [size(plvbin_seizure_offset{f}{s},1),1,1]);
+        zscore_plv_seizure_offset{f}{s}= (plvbin_seizure_offset{f}{s} - baseline_plv)./std_plv;
+        
+    end
+    %%
+    %EMU022_display_seizure_plv_offset;
+    %close all
+end
+
+
+%save(['Z:\Projects\Thalamus Epilepsy\SfN 2021\data\',SUBJECT,'_seizure_data.mat'], '-v7.3');

@@ -1,0 +1,18 @@
+
+
+fs = 2048;
+fq = logspace(log10(4), log10(250), 25);
+width = 7;
+
+
+cfg = [];
+cfg.fq = fq;
+cfg.width = width;
+cfg.data = y_seizure_onset;
+cfg.montage = montage;
+[power, phase] = WaveletDecomposition(cfg);
+
+
+display_seizure_spectra;
+
+
